@@ -6,7 +6,8 @@ from sklearn.neighbors import KNeighborsClassifier
 
 
 def main(args):
-    assert len(args) == 2
+    if len(args) != 2:
+        raise RuntimeError("not enough arguments")
 
     tr_path = args[0]
     ts_path = args[1]
