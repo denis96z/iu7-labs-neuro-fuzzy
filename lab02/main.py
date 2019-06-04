@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.preprocessing import StandardScaler
 
 NUM_CLUSTERS = 10
 
-TR_DS_LIMIT = None
-TS_DS_LIMIT = None
+TR_DS_LIMIT = 200
+TS_DS_LIMIT = 100
 
 
 def main(args):
@@ -33,6 +34,10 @@ def main(args):
     else:
         x_ts = ts_set[:TS_DS_LIMIT, 1:]
         y_ts = ts_set[:TS_DS_LIMIT, 0]
+
+    sc = StandardScaler()
+    x_tr = sc.fit_transform(x_tr)
+    x_ts = sc.fit_transform(x_ts)
 
     data = {'precision_score': [], 'recall_score': [], 'f1_score': []}
 
