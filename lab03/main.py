@@ -1,50 +1,56 @@
-import pandas as pd
-import seaborn as sns
-from sklearn.datasets import fetch_mldata
-from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
+import sys
+
+import numpy as np
 import matplotlib.pyplot as plt
 
-mnist = fetch_mldata('MNIST original')
+from sklearn.cluster import KMeans
+from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import scale
 
-mnist_data = mnist.data
 
-mnist_labels = mnist.target
+def main(args):
+    if len(args) != 1:
+        raise RuntimeError('not enough arguments')
+    image_filename = args[0]
 
-train_X, test_X, train_Y, test_Y = train_test_split(mnist.data, mnist.target, test_size=1/7, random_state=0)
+    np.random.seed(0)
 
-plt.subplot(121)
-plt.imshow(train_X[0,:].reshape(28,28), cmap='gray')
-plt.title("Ground Truth : {}".format(train_Y[0]))
+    digits = load_digits()
+    data = scale(digits.data)
+    n_digits = len(np.unique(digits.target))
 
-# Display the first image in testing data
-plt.subplot(122)
-plt.imshow(test_X[0,:].reshape(28,28), cmap='gray')
-plt.title("Ground Truth : {}".format(test_Y[0]))
-plt.savefig('./plot.png')
+    reduced_data = PCA(n_components=2).fit_transform(data)
+    kmeans = KMeans(init='k-means++', n_clusters=n_digits, n_init=10)
+    kmeans.fit(reduced_data)
 
-feat_cols = ['pixel'+str(i) for i in range(train_X.shape[1])]
+    h = .02
+    x_min, x_max = reduced_data[:, 0].min() - 1, reduced_data[:, 0].max() + 1
+    y_min, y_max = reduced_data[:, 1].min() - 1, reduced_data[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
-df_mnist = pd.DataFrame(train_X,columns=feat_cols)
+    z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
 
-df_mnist['label'] = train_Y
-print('Size of the dataframe: {}'.format(df_mnist.shape))
+    z = z.reshape(xx.shape)
+    plt.figure(1)
+    plt.clf()
+    plt.imshow(z, interpolation='nearest',
+               extent=(xx.min(), xx.max(), yy.min(), yy.max()),
+               cmap=plt.cm.Paired,
+               aspect='auto', origin='lower')
 
-pca_mnist = PCA(n_components=2)
-principalComponents_mnist = pca_mnist.fit_transform(df_mnist.iloc[:,:-1])
+    plt.plot(reduced_data[:, 0], reduced_data[:, 1], 'k.', markersize=2)
+    centroids = kmeans.cluster_centers_
+    plt.scatter(centroids[:, 0], centroids[:, 1],
+                marker='x', s=169, linewidths=3,
+                color='w', zorder=10)
+    plt.title('K-Means with PCA')
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
+    plt.xticks(())
+    plt.yticks(())
+    plt.savefig(image_filename)
 
-principal_mnist_Df = pd.DataFrame(data = principalComponents_mnist
-             , columns = ['principal component 1', 'principal component 2'])
-principal_mnist_Df['y'] = train_Y
 
-principal_mnist_Df.head()
-
-plt.figure(figsize=(16,10))
-sns.scatterplot(
-    x="principal component 1", y="principal component 2",
-    hue="y",
-    palette=sns.color_palette("hls", 10),
-    data=principal_mnist_Df,
-    legend="full",
-    alpha=0.3
-)
+if __name__ == '__main__':
+    main(sys.argv[1:])
